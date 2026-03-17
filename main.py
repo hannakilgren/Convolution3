@@ -98,17 +98,30 @@ def max_pool(img, size=2):
 # ============================================================
 
 # Example:
-# kernel1 = np.array([
-#     [ 1, 0, -1],
-#     [ 1, 0, -1],
-#     [ 1, 0, -1]
-# ], dtype=np.float32)
+kernel_edge = np.array([
+    [ -1, 0, 1],
+    [ -1, 0, 1],
+    [ -1, 0, 1]
+], dtype=np.float32)
+
+kernel_corner = np.array([
+    [-1,-1,-1],
+    [-1,8,-1],
+    [-1,-1,-1]
+], dtype=np.float32)
+
+kernel_blur = np.array([
+    [ 1/9, 1/9, 1/9],
+    [ 1/9, 1/9, 1/9],
+    [ 1/9, 1/9, 1/9]
+], dtype=np.float32)
+
 
 # TODO: define kernel1
 # TODO: define kernel2
 # TODO: define kernel3
 
-kernels = []
+kernels = [kernel_edge, kernel_corner, kernel_blur]
 
 
 # ============================================================
@@ -136,10 +149,10 @@ def process_image(image, kernel):
     feature_map = relu(feature_map)
 
     # Step 3: apply max pooling
-    pooled_map = None   # TODO: replace None
+    pooled_map = max_pool(feature_map)   # TODO: replace None
 
     # Step 4: compute the score from the pooled map
-    score = None        # TODO: replace None
+    score = np.max(pooled_map)        # TODO: replace None
 
     return feature_map, pooled_map, score
 
@@ -160,14 +173,10 @@ def extract_features(image, kernels):
 
     for kernel in kernels:
         # Use process_image to get the score for this kernel
-        feature_map, pooled_map, score = None, None, None   # TODO
+        feature_map, pooled_map, score = process_image(image, kernel)
 
-        # Find various ways to score the pooled map, such as:
-        #   - np.max(pooled_map)    
-        #   - np.mean(pooled_map)
-        #   - np.sum(pooled_map)
-        # Add the score to the features list
-        # TODO
+        # Use the max pooled activation as the feature score
+        features.append(float(score))
 
     # After this loop, features should be a list of scores, several for each kernel.
     return features
@@ -193,8 +202,13 @@ def predict_class(features):
     # Example:
     # feature0 = features[0]
     # feature1 = features[1]
-
-    prediction = None   # TODO: replace None
+    # Simple rule:
+    # - If the corner detector (index 1) fires stronger than the edge detector (index 0)
+    #   we predict square (1). Otherwise predict circle (0).
+    if len(features) >= 2 and features[1] > features[0]:
+        prediction = 1
+    else:
+        prediction = 0
     return prediction
 
 
@@ -217,16 +231,16 @@ def evaluate_dataset(images, kernels, true_label):
 
     for image in images:
         # Step 1: get the feature vector for this image
-        features = None   # TODO
+        features = extract_features(image, kernels)
 
         # Step 2: predict the class
-        prediction = None   # TODO
+        prediction = predict_class(features)
 
         # Step 3: count correct predictions
         if prediction == true_label:
             correct += 1
 
-    accuracy = None   # TODO
+    accuracy = correct / total if total > 0 else 0.0
     return accuracy
 
 
@@ -288,19 +302,19 @@ def main():
 
     # Print one example feature vector from each class
     # Use the first image in each list
-    circle_features = None   # TODO
-    square_features = None   # TODO
+    circle_features = extract_features(circle_images[0], kernels)
+    square_features = extract_features(square_images[0], kernels)
 
     print("Example circle feature vector:", circle_features)
     print("Example square feature vector:", square_features)
 
     # Evaluate each class separately
-    circle_accuracy = None   # TODO
-    square_accuracy = None   # TODO
+    circle_accuracy = evaluate_dataset(circle_images, kernels, true_label=0)
+    square_accuracy = evaluate_dataset(square_images, kernels, true_label=1)
 
     # Compute weighted overall accuracy
     total_images = len(circle_images) + len(square_images)
-    overall_accuracy = None   # TODO
+    overall_accuracy = (circle_accuracy * len(circle_images) + square_accuracy * len(square_images)) / total_images if total_images > 0 else 0.0
 
     print("Circle accuracy:", circle_accuracy)
     print("Square accuracy:", square_accuracy)
@@ -308,10 +322,10 @@ def main():
 
     # Show one example visualization
     # Choose one image and one kernel
-    example_image = circle_images[0]
+    example_image =square_images[0]  # Change this index to show a different image
     example_kernel = kernels[0]
 
-    feature_map, pooled_map, score = None, None, None   # TODO
+    feature_map, pooled_map, score = process_image(example_image, example_kernel)
 
     show_results(
         example_image,
